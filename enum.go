@@ -108,19 +108,6 @@ func findEnums(pass *analysis.Pass, pkgScopeOnly bool, pkg *types.Package, inspe
 	return result
 }
 
-func namedEnumType(t types.Type) (*types.Named, bool) {
-	t = types.Unalias(t)
-	named, ok := t.(*types.Named)
-	if !ok {
-		return nil, false
-	}
-	basic, ok := named.Underlying().(*types.Basic)
-	if !ok || !validBasic(basic) {
-		return nil, false
-	}
-	return named, true
-}
-
 func possibleEnumMember(constName *ast.Ident, info *types.Info) (et enumType, name string, val constantValue, ok bool) {
 	// Notes
 	//
@@ -153,11 +140,12 @@ func possibleEnumMember(constName *ast.Ident, info *types.Info) (et enumType, na
 		// Also, we have no real purpose to record them.
 		return enumType{}, "", "", false
 	}
-	named, ok := namedEnumType(obj.Type())
-	if !ok {
+	aliased := types.Unalias(obj.Type())
+	if !validNamedBasic(aliased) {
 		return enumType{}, "", "", false
 	}
 
+	named := aliased.(*types.Named)
 	tn := named.Obj()
 
 	// By definition, enum type's scope and enum member's scope must be the
@@ -229,8 +217,16 @@ func hasIgnoreDecl(pass *analysis.Pass, doc *ast.CommentGroup) bool {
 //
 // The following is guaranteed:
 //
-//	validNamedBasic(t) == true => t.(*types.Named)
+//	validNamedBasic(t) == true => types.Unalias(t).(*types.Named)
 func validNamedBasic(t types.Type) bool {
-	_, ok := namedEnumType(t)
-	return ok
+	t = types.Unalias(t)
+	named, ok := t.(*types.Named)
+	if !ok {
+		return false
+	}
+	basic, ok := named.Underlying().(*types.Basic)
+	if !ok || !validBasic(basic) {
+		return false
+	}
+	return true
 }
