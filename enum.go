@@ -140,12 +140,11 @@ func possibleEnumMember(constName *ast.Ident, info *types.Info) (et enumType, na
 		// Also, we have no real purpose to record them.
 		return enumType{}, "", "", false
 	}
-	aliased := types.Unalias(obj.Type())
-	if !validNamedBasic(aliased) {
+	if !validNamedBasic(obj.Type()) {
 		return enumType{}, "", "", false
 	}
 
-	named := aliased.(*types.Named)
+	named := types.Unalias(obj.Type()).(*types.Named) // guaranteed by validNamedBasic
 	tn := named.Obj()
 
 	// By definition, enum type's scope and enum member's scope must be the
